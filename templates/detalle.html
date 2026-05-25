@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block titulo %}{{ libro.titulo[:40] }}{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block contenido %}
+
+{# ── Navegación de retorno ─────────────────────────────────────────────────── #}
+<p style="margin-bottom: 1rem;">
+  <a href="{{ url_for('home') }}" style="color: var(--gris-texto); font-size: .875rem;">
+    ← Volver al dashboard
+  </a>
+</p>
+
+{# ── Header del libro ─────────────────────────────────────────────────────── #}
+<div class="detalle-header">
+  <div class="detalle-header__info">
+    <h1 class="detalle-header__titulo">{{ libro.titulo }}</h1>
+    <div class="detalle-header__meta">
+      <span>
+        <span class="estrellas">
+          {% for i in range(1, 6) %}
+            {% if i <= libro.rating %}★{% else %}<span class="vacia">★</span>{% endif %}
+          {% endfor %}
+        </span>
+        {{ libro.rating }}/5
+      </span>
+      <span>
+        {% if "stock" in libro.disponibilidad | lower %}
+          <span class="badge-stock badge-stock--ok">{{ libro.disponibilidad }}</span>
+        {% else %}
+          <span class="badge-stock badge-stock--no">{{ libro.disponibilidad }}</span>
+        {% endif %}
+      </span>
+      <span style="color: var(--gris-texto);">
+        Visto por primera vez: {{ libro.primera_vez_visto[:10] }}
+      </span>
+      {% if libro.link %}
+      <span>
+        <a href="{{ libro.link }}" target="_blank" rel="noopener">
+          Ver en el sitio ↗
+        </a>
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="detalle-precio">{{ libro.precio_actual | libras }}</div>
+</div>
+
+{# ── Gráfico de evolución de precios ──────────────────────────────────────── #}
+<div class="grafico-wrap">
+  <h2 class="grafico-titulo">Evolución del precio</h2>
+  {% if historial | length > 1 %}
+    <canvas id="grafico-precio" style="max-height: 320px;"></canvas>
+  {% elif historial | length == 1 %}
+    <p style="color: var(--gris-texto); font-size: .875rem; text-align: center; padding: 2rem 0;">
+      Solo hay un snapshot registrado. Actualizá los datos para ver la evolución.
+    </p>
+  {% else %}
+    <p style="color: var(--gris-texto); font-size: .875rem; text-align: center; padding: 2rem 0;">
+      Sin datos históricos todavía.
+    </p>
+  {% endif %}
+</div>
+
+{# ── Tabla de snapshots históricos ────────────────────────────────────────── #}
+<div class="seccion">
+  <div class="seccion__header">
+    <h2 class="seccion__titulo">Historial de snapshots</h2>
+    <span style="font-size: .8rem; color: var(--gris-texto);">
+      {{ historial | length }} registro(s)
+    </span>
+  </div>
+
+  {% if historial %}
+  <div class="tabla-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fecha (UTC)</th>
+          <th>Precio</th>
+          <th>Disponibilidad</th>
+          <th>Variación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for snap in historial | reverse %}
+          {# Calcular variación respecto al snapshot anterior (en orden cronológico) #}
+          {% set idx = (historial | length) - loop.index %}
+          {% if idx > 0 %}
+            {% set anterior = historial[idx - 1].precio %}
+            {% set diff = snap.precio - anterior %}
+          {% else %}
+            {% set diff = none %}
+          {% endif %}
+        <tr>
+          <td style="color: var(--gris-texto); font-size: .8rem;">{{ loop.index }}</td>
+          <td style="font-size: .85rem;">{{ snap.fecha[:16] | replace("T", " ") }}</td>
+          <td class="td-precio">{{ snap.precio | libras }}</td>
+          <td>
+            {% if "stock" in snap.disponibilidad | lower %}
+              <span class="badge-stock badge-stock--ok">{{ snap.disponibilidad }}</span>
+            {% else %}
+              <span class="badge-stock badge-stock--no">{{ snap.disponibilidad }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if diff is not none %}
+              {% if diff < 0 %}
+                <span style="color: var(--verde); font-weight: 600;">
+                  ▼ £{{ "%.2f"|format(diff|abs) }}
+                </span>
+              {% elif diff > 0 %}
+                <span style="color: var(--rojo); font-weight: 600;">
+                  ▲ £{{ "%.2f"|format(diff) }}
+                </span>
+              {% else %}
+                <span style="color: var(--gris-texto);">—</span>
+              {% endif %}
+            {% else %}
+              <span style="color: var(--gris-texto); font-size: .8rem;">primer registro</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="vacio">
+    <div class="vacio__icono">📊</div>
+    <div class="vacio__titulo">Sin historial</div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Script de Chart.js ───────────────────────────────────────────────────── #}
+{% if historial | length > 1 %}
+<script>
+  const fechas  = {{ fechas_json  | tojson }};
+  const precios = {{ precios_json | tojson }};
+
+  const ctx = document.getElementById("grafico-precio").getContext("2d");
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: fechas,
+      datasets: [{
+        label: "Precio (£)",
+        data: precios,
+        borderColor: "#2563eb",
+        backgroundColor: "rgba(37, 99, 235, 0.08)",
+        borderWidth: 2.5,
+        pointBackgroundColor: "#2563eb",
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        fill: true,
+        tension: 0.35,
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `£${ctx.parsed.y.toFixed(2)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: "#f1f5f9" },
+          ticks: {
+            font: { size: 11 },
+            maxTicksLimit: 8,
+            maxRotation: 30,
+          }
+        },
+        y: {
+          grid: { color: "#f1f5f9" },
+          ticks: {
+            font: { size: 11 },
+            callback: val => `£${val.toFixed(2)}`
+          },
+          // Algo de padding para que la línea no quede pegada al borde
+          grace: "10%",
+        }
+      }
+    }
+  });
+</script>
+{% endif %}
+
+{% endblock %}

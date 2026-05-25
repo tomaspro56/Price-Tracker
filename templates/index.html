@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block titulo %}Dashboard{% endblock %}
+
+{% block contenido %}
+<h1 class="pagina-titulo">
+  Dashboard
+  {% if libros %}
+    <small>{{ libros|length }} libro(s) en seguimiento</small>
+  {% endif %}
+</h1>
+
+{# ── Tarjetas de resumen ──────────────────────────────────────────────────── #}
+{% if resumen %}
+<div class="grid-resumen">
+  <div class="tarjeta-stat">
+    <div class="tarjeta-stat__etiqueta">Total libros</div>
+    <div class="tarjeta-stat__valor">{{ resumen.total }}</div>
+    <div class="tarjeta-stat__sub">en la base de datos</div>
+  </div>
+
+  <div class="tarjeta-stat">
+    <div class="tarjeta-stat__etiqueta">Precio promedio</div>
+    <div class="tarjeta-stat__valor">{{ resumen.promedio | libras }}</div>
+    <div class="tarjeta-stat__sub">por libro</div>
+  </div>
+
+  <div class="tarjeta-stat">
+    <div class="tarjeta-stat__etiqueta">Más caro</div>
+    <div class="tarjeta-stat__valor">{{ resumen.mas_caro.precio_actual | libras }}</div>
+    <div class="tarjeta-stat__sub" title="{{ resumen.mas_caro.titulo }}">
+      {{ resumen.mas_caro.titulo[:35] }}{% if resumen.mas_caro.titulo|length > 35 %}…{% endif %}
+    </div>
+  </div>
+
+  <div class="tarjeta-stat">
+    <div class="tarjeta-stat__etiqueta">Más barato</div>
+    <div class="tarjeta-stat__valor">{{ resumen.mas_barato.precio_actual | libras }}</div>
+    <div class="tarjeta-stat__sub" title="{{ resumen.mas_barato.titulo }}">
+      {{ resumen.mas_barato.titulo[:35] }}{% if resumen.mas_barato.titulo|length > 35 %}…{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Cambios de precio ────────────────────────────────────────────────────── #}
+<div class="seccion">
+  <div class="seccion__header">
+    <h2 class="seccion__titulo">Cambios de precio recientes</h2>
+  </div>
+  <div class="seccion__cuerpo">
+    {% if cambios %}
+      <div class="lista-cambios">
+        {% for c in cambios %}
+          {% set baja = c.diferencia < 0 %}
+          <div class="cambio-item {{ 'cambio-item--baja' if baja else 'cambio-item--suba' }}">
+            <div class="cambio-item__titulo">
+              <a href="{{ url_for('detalle', libro_id=c.libro_id) }}">
+                {{ c.titulo[:60] }}{% if c.titulo|length > 60 %}…{% endif %}
+              </a>
+            </div>
+            <div class="cambio-item__precios">
+              {{ c.precio_anterior | libras }} → {{ c.precio_nuevo | libras }}
+            </div>
+            <span class="badge {{ 'badge--baja' if baja else 'badge--suba' }}">
+              {% if baja %}▼{% else %}▲{% endif %}
+              {{ "%.2f"|format(c.diferencia|abs) }}
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: var(--gris-texto); font-size: .875rem;">
+        Sin cambios de precio detectados.
+        {% if not libros %}Ejecutá una actualización para cargar datos.{% endif %}
+      </p>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Tabla de libros ──────────────────────────────────────────────────────── #}
+<div class="seccion">
+  <div class="seccion__header">
+    <h2 class="seccion__titulo">Catálogo de libros</h2>
+  </div>
+
+  {% if libros %}
+  <div class="tabla-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Precio actual</th>
+          <th>Rating</th>
+          <th>Disponibilidad</th>
+          <th>Última actualización</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for libro in libros %}
+        <tr>
+          <td class="td-titulo" title="{{ libro.titulo }}">
+            {{ libro.titulo[:50] }}{% if libro.titulo|length > 50 %}…{% endif %}
+          </td>
+          <td class="td-precio">{{ libro.precio_actual | libras }}</td>
+          <td>
+            <span class="estrellas">
+              {% for i in range(1, 6) %}
+                {% if i <= libro.rating %}★{% else %}<span class="vacia">★</span>{% endif %}
+              {% endfor %}
+            </span>
+          </td>
+          <td>
+            {% if "stock" in libro.disponibilidad | lower %}
+              <span class="badge-stock badge-stock--ok">{{ libro.disponibilidad }}</span>
+            {% else %}
+              <span class="badge-stock badge-stock--no">{{ libro.disponibilidad }}</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--gris-texto); font-size: .8rem;">
+            {{ libro.ultima_actualizacion[:16] | replace("T", " ") }}
+          </td>
+          <td>
+            <a href="{{ url_for('detalle', libro_id=libro.id) }}" class="btn btn--secundario">
+              Ver historial
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="vacio">
+    <div class="vacio__icono">📭</div>
+    <div class="vacio__titulo">No hay datos aún</div>
+    <div class="vacio__subtitulo">
+      Hacé clic en <strong>Actualizar datos</strong> para hacer el primer scrape.
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Exportar datos ───────────────────────────────────────────────────────── #}
+<div class="seccion">
+  <div class="seccion__header">
+    <h2 class="seccion__titulo">Exportar datos</h2>
+    {% if not libros %}
+      <span style="font-size: .8rem; color: var(--gris-texto);">
+        Disponible después de la primera actualización
+      </span>
+    {% endif %}
+  </div>
+  <div class="seccion__cuerpo">
+    {% if libros %}
+      <p style="font-size: .875rem; color: var(--gris-texto); margin-bottom: 1rem;">
+        Los archivos se generan con los datos actuales de la base de datos.
+      </p>
+      <div class="export-grid">
+        <div class="export-card">
+          <div class="export-card__icono">📊</div>
+          <div class="export-card__info">
+            <div class="export-card__titulo">Catálogo — Excel</div>
+            <div class="export-card__desc">
+              {{ libros|length }} libro(s) con precio actual, rating y disponibilidad.
+              Con formato de moneda y encabezados estilizados.
+            </div>
+          </div>
+          <a href="{{ url_for('exportar_catalogo_excel') }}" class="btn btn--primario">
+            ↓ Descargar .xlsx
+          </a>
+        </div>
+
+        <div class="export-card">
+          <div class="export-card__icono">📄</div>
+          <div class="export-card__info">
+            <div class="export-card__titulo">Catálogo — CSV</div>
+            <div class="export-card__desc">
+              Mismo contenido en formato CSV. Encoding UTF-8 con BOM
+              para compatibilidad con Excel.
+            </div>
+          </div>
+          <a href="{{ url_for('exportar_catalogo_csv') }}" class="btn btn--primario">
+            ↓ Descargar .csv
+          </a>
+        </div>
+
+        <div class="export-card">
+          <div class="export-card__icono">📈</div>
+          <div class="export-card__info">
+            <div class="export-card__titulo">Historial completo — Excel</div>
+            <div class="export-card__desc">
+              Todos los snapshots de precio de todos los libros.
+              Útil para analizar tendencias con pivot tables.
+            </div>
+          </div>
+          <a href="{{ url_for('exportar_historial_excel') }}" class="btn btn--primario">
+            ↓ Descargar .xlsx
+          </a>
+        </div>
+      </div>
+    {% else %}
+      <div class="vacio" style="padding: 2rem 0;">
+        <div class="vacio__icono">📁</div>
+        <div class="vacio__titulo">Sin datos para exportar</div>
+        <div class="vacio__subtitulo">Ejecutá una actualización primero.</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

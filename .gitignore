@@ -1,0 +1,42 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Entorno virtual ───────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Base de datos ─────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Logs (generados en tiempo de ejecución) ───────────────────────────────────
+logs/
+
+# ── Exportaciones generadas ───────────────────────────────────────────────────
+exports/
+
+# ── IDEs y sistema operativo ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Variables de entorno ──────────────────────────────────────────────────────
+.env
+.env.*
+
+# ── Claude Code ───────────────────────────────────────────────────────────────
+.claude/

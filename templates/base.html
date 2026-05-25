@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block titulo %}Price Tracker{% endblock %} — Books</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+  <header class="header">
+    <a href="{{ url_for('home') }}" class="header__logo">
+      <span>📚</span> Price Tracker
+    </a>
+    <nav class="header__nav">
+      <a href="{{ url_for('home') }}" class="btn btn--fantasma">Dashboard</a>
+      <a href="{{ url_for('actualizar') }}" class="btn btn--primario">
+        ↻ Actualizar datos
+      </a>
+    </nav>
+  </header>
+
+  <main class="contenido">
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    Price Tracker · books.toscrape.com · Proyecto de portafolio
+  </footer>
+
+</body>
+</html>
