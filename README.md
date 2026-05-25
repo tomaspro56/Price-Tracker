@@ -99,8 +99,8 @@ El principio de diseño central es la **separación de responsabilidades**: cada
 ### Instalación
 
 ```bash
-git clone https://github.com/tu-usuario/price-tracker.git
-cd price-tracker
+git clone https://github.com/tomaspro56/Price-Tracker.git
+cd Price-Tracker
 
 python3 -m venv venv
 source venv/bin/activate       # Linux / macOS / WSL
